@@ -80,6 +80,33 @@ router.post('/capture_viewport', function(req, res, next) {
   }
 });
 
+router.post('/capture_wait', function(req, res, next) {
+  var urlToScreenshot = parseUrl(req.body.url);
+
+  if (validUrl.isWebUri(urlToScreenshot)) {
+    console.log('Screenshotting: ' + urlToScreenshot);
+    (async() => {
+      const browser = await puppeteer.launch({
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+
+      const page = await browser.newPage();
+      await page.goto(urlToScreenshot);
+      await page.waitFor(2 * 1000);
+      await page.screenshot().then(function(buffer) {
+        res.setHeader('Content-Disposition', 'attachment;filename="' + urlToScreenshot + '.png"');
+        res.setHeader('Content-Type', 'image/png');
+        res.send(buffer)
+      });
+
+      await browser.close();
+    })();
+
+  } else {
+    res.send('Invalid url: ' + urlToScreenshot);
+  }
+});
+
 router.get('/:view', function(req, res, next) {
   res.render('puppeteer/' + req.params.view, { title: req.params.view + ' | Puppeteer' });
 });
